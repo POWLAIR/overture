@@ -1,0 +1,169 @@
+// prisma/schema.prisma
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/prisma"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth (NextAuth v5 requis) ────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Utilisateur ──────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  watchlist   WatchlistGame[]
+  alerts      Alert[]
+  preferences UserPreferences?
+}
+
+model UserPreferences {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Alertes
+  emailAlerts     Boolean @default(true)
+  pushAlerts      Boolean @default(true)
+  alertDaysBefore Int     @default(30)
+
+  // Géographie
+  geoRadius Float? // km, null = monde entier
+  geoLat    Float?
+  geoLng    Float?
+
+  // Filtres concerts
+  showUnofficialConcerts Boolean @default(false)
+
+  // Thème
+  manualTheme String? // "dark" | "light" | null (auto selon heure)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Watchlist ────────────────────────────────────────────────────────────────
+
+model WatchlistGame {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  steamId  Int? // AppID Steam, null si ajout manuel
+  name     String
+  imageUrl String?
+
+  addedAt DateTime @default(now())
+
+  @@unique([userId, steamId])
+}
+
+// ─── Concerts ─────────────────────────────────────────────────────────────────
+
+model Concert {
+  id         String @id @default(cuid())
+  externalId String // ID unique côté source
+  source     String // "ticketmaster" | "bandsintown" | "songkick"
+
+  title     String
+  artist    String
+  gameIds   Int[] // Steam AppIDs associés (via mapping)
+  gameNames String[] // Noms lisibles associés
+
+  date    DateTime
+  venueId String?
+  venue   Venue?   @relation(fields: [venueId], references: [id])
+
+  ticketUrl   String?
+  price       String?
+  isOfficial  Boolean   @default(true) // Scoring automatique
+  isAvailable Boolean   @default(true) // Billetterie encore ouverte
+  onsaleDate  DateTime? // Ouverture billetterie si connue
+
+  rawData Json // Données brutes source (debug + évolution schéma)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  alerts Alert[]
+
+  @@unique([externalId, source])
+}
+
+model Venue {
+  id      String  @id @default(cuid())
+  name    String
+  city    String
+  country String
+  lat     Float?
+  lng     Float?
+  url     String?
+
+  concerts Concert[]
+
+  @@unique([name, city]) // Évite les doublons salle/ville
+}
+
+// ─── Alertes ──────────────────────────────────────────────────────────────────
+
+model Alert {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  concertId String
+  concert   Concert @relation(fields: [concertId], references: [id], onDelete: Cascade)
+
+  notified  Boolean  @default(false) // Notification déjà envoyée
+  createdAt DateTime @default(now())
+
+  @@unique([userId, concertId])
+}
