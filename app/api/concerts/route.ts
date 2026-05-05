@@ -5,13 +5,13 @@ import { Ratelimit } from "@upstash/ratelimit"
 import { prisma } from "@/lib/db/prisma"
 import { redis, getCached, setCached, TTL_CONCERTS } from "@/lib/cache/redis"
 
-const ratelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(60, "1 m"),
-  prefix: "ratelimit:concerts",
-})
-
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const ratelimit = new Ratelimit({
+    redis: redis(),
+    limiter: Ratelimit.slidingWindow(60, "1 m"),
+    prefix: "ratelimit:concerts",
+  })
+
   const ip = request.headers.get("x-forwarded-for") ?? "anonymous"
   const { success } = await ratelimit.limit(ip)
 

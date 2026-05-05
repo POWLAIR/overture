@@ -7,17 +7,32 @@ const globalForRedis = globalThis as unknown as {
   redis: Redis | undefined
 }
 
-export const redis =
-  globalForRedis.redis ??
-  Redis.fromEnv()
+function getRedis(): Redis {
+  if (globalForRedis.redis) return globalForRedis.redis
 
-if (process.env.NODE_ENV !== "production") {
-  globalForRedis.redis = redis
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+
+  if (!url || !token) {
+    throw new Error(
+      "[redis] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required"
+    )
+  }
+
+  const client = new Redis({ url, token })
+
+  if (process.env.NODE_ENV !== "production") {
+    globalForRedis.redis = client
+  }
+
+  return client
 }
+
+export { getRedis as redis }
 
 export async function getCached<T>(key: string): Promise<T | null> {
   try {
-    const value = await redis.get<T>(key)
+    const value = await getRedis().get<T>(key)
     return value ?? null
   } catch (e) {
     console.error("[redis] getCached failed", { key, error: e })
@@ -31,7 +46,7 @@ export async function setCached<T>(
   ttlSeconds: number
 ): Promise<void> {
   try {
-    await redis.set(key, value, { ex: ttlSeconds })
+    await getRedis().set(key, value, { ex: ttlSeconds })
   } catch (e) {
     console.error("[redis] setCached failed", { key, error: e })
   }
@@ -39,9 +54,9 @@ export async function setCached<T>(
 
 export async function invalidateConcertCache(): Promise<void> {
   try {
-    const keys = await redis.keys("concerts:*")
+    const keys = await getRedis().keys("concerts:*")
     if (keys.length > 0) {
-      await redis.del(...keys)
+      await getRedis().del(...keys)
     }
   } catch (e) {
     console.error("[redis] invalidateConcertCache failed", { error: e })
