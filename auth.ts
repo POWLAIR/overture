@@ -2,7 +2,6 @@ import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import type { PrismaClient as PrismaClientStd } from "@prisma/client"
 import bcrypt from "bcryptjs"
 
 import { authConfig } from "./auth.config"
@@ -10,7 +9,8 @@ import { prisma } from "@/lib/db/prisma"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: PrismaAdapter(prisma as unknown as PrismaClientStd),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  adapter: PrismaAdapter(prisma as any),
   session: { strategy: "jwt" },
   providers: [
     Google,
