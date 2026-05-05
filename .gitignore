@@ -47,5 +47,4 @@ next-env.d.ts
 .cursor
 
 # docs perso
-docs/conception.md
-docs/ci-procedure-overture.md
+docs/perso/
