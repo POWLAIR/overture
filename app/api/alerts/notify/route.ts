@@ -20,14 +20,14 @@ function daysBetween(future: Date, now: Date): number {
   return Math.round(ms / (1000 * 60 * 60 * 24))
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  const authHeader = request.headers.get("Authorization")
+function isAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) return false
+  const authHeader = request.headers.get("Authorization")
+  return authHeader === `Bearer ${cronSecret}`
+}
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+async function runNotify(): Promise<NextResponse> {
   const now = new Date()
   const horizonDays = 90
   const horizon = new Date(now.getTime() + horizonDays * 24 * 60 * 60 * 1000)
@@ -36,16 +36,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     where: {
       notified: false,
       concert: {
-        date: { gte: now, lte: horizon },
+        date: { gte: startOfDay(now), lte: horizon },
       },
     },
     include: {
-      user: {
-        include: { preferences: true },
-      },
-      concert: {
-        include: { venue: true },
-      },
+      user: { include: { preferences: true } },
+      concert: { include: { venue: true } },
     },
   })
 
@@ -53,6 +49,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let pushSent = 0
   let marked = 0
   let skipped = 0
+  let failed = 0
 
   for (const alert of alerts) {
     const prefs = alert.user.preferences
@@ -66,6 +63,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const wantEmail = prefs ? prefs.emailAlerts : true
     const wantPush = prefs ? prefs.pushAlerts : true
+
+    let emailOk = false
+    let pushOk = false
 
     if (wantEmail && alert.user.email) {
       const result = await sendAlertEmail({
@@ -86,7 +86,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         },
         daysBefore: days,
       })
-      if (result.ok) emailsSent += 1
+      emailOk = result.ok
+      if (emailOk) emailsSent += 1
     }
 
     if (wantPush) {
@@ -97,17 +98,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           url: `/concerts/${alert.concert.id}`,
           tag: `alert-${alert.id}`,
         })
+        pushOk = sent > 0
         pushSent += sent
       } catch (e) {
         console.error("[notify] push failed", { alertId: alert.id, error: e })
       }
     }
 
-    await prisma.alert.update({
-      where: { id: alert.id },
-      data: { notified: true },
-    })
-    marked += 1
+    const shouldMark = (!wantEmail || emailOk) && (!wantPush || pushOk)
+
+    if (shouldMark) {
+      await prisma.alert.update({
+        where: { id: alert.id },
+        data: { notified: true },
+      })
+      marked += 1
+    } else {
+      console.warn("[notify] alert not marked, will retry next run", {
+        alertId: alert.id,
+        wantEmail,
+        emailOk,
+        wantPush,
+        pushOk,
+      })
+      failed += 1
+    }
   }
 
   return NextResponse.json({
@@ -116,6 +131,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     pushSent,
     marked,
     skipped,
+    failed,
     timestamp: now.toISOString(),
   })
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  return runNotify()
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  return runNotify()
 }

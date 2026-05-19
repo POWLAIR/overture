@@ -41,14 +41,14 @@ function deduplicateConcerts(
   })
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  const authHeader = request.headers.get("Authorization")
+function isAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) return false
+  const authHeader = request.headers.get("Authorization")
+  return authHeader === `Bearer ${cronSecret}`
+}
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+async function runSync(): Promise<NextResponse> {
   const searchTerms = getAllSearchTerms()
 
   const results = await Promise.allSettled(
@@ -153,4 +153,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     total: scored.length,
     timestamp: new Date().toISOString(),
   })
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  return runSync()
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  return runSync()
 }
