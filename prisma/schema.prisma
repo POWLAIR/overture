@@ -59,11 +59,27 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  accounts    Account[]
-  sessions    Session[]
-  watchlist   WatchlistGame[]
-  alerts      Alert[]
-  preferences UserPreferences?
+  accounts          Account[]
+  sessions          Session[]
+  watchlist         WatchlistGame[]
+  alerts            Alert[]
+  preferences       UserPreferences?
+  pushSubscriptions PushSubscription[]
+}
+
+// ─── Notifications push ───────────────────────────────────────────────────────
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  authKey   String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model UserPreferences {

@@ -159,6 +159,16 @@ exports.Prisma.UserScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.PushSubscriptionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  endpoint: 'endpoint',
+  p256dh: 'p256dh',
+  authKey: 'authKey',
+  userAgent: 'userAgent',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.UserPreferencesScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -252,6 +262,7 @@ exports.Prisma.ModelName = {
   Session: 'Session',
   VerificationToken: 'VerificationToken',
   User: 'User',
+  PushSubscription: 'PushSubscription',
   UserPreferences: 'UserPreferences',
   WatchlistGame: 'WatchlistGame',
   Concert: 'Concert',

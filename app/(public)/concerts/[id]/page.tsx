@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
+
+import { auth } from "@/auth"
 import { prisma } from "@/lib/db/prisma"
+import { AlertButton } from "@/components/concert/AlertButton"
+import { CalendarMenu } from "@/components/concert/CalendarMenu"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -73,7 +77,36 @@ export default async function ConcertDetailPage({ params }: PageProps) {
 
   if (!concert) notFound()
 
+  const session = await auth()
+  const isAuthenticated = Boolean(session?.user?.id)
+
+  let isAlerted = false
+  if (session?.user?.id) {
+    const existing = await prisma.alert.findUnique({
+      where: {
+        userId_concertId: { userId: session.user.id, concertId: concert.id },
+      },
+      select: { id: true },
+    })
+    isAlerted = Boolean(existing)
+  }
+
   const concertDate = new Date(concert.date)
+
+  const calendarConcert = {
+    id: concert.id,
+    title: concert.title,
+    artist: concert.artist,
+    date: concertDate,
+    ticketUrl: concert.ticketUrl,
+    venue: concert.venue
+      ? {
+          name: concert.venue.name,
+          city: concert.venue.city,
+          country: concert.venue.country,
+        }
+      : null,
+  }
 
   return (
     <main className="min-h-dvh py-8 px-4 sm:px-6">
@@ -268,6 +301,27 @@ export default async function ConcertDetailPage({ params }: PageProps) {
               Billetterie non disponible
             </div>
           )}
+        </div>
+
+        {/* Secondary actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+          {isAuthenticated ? (
+            <AlertButton concertId={concert.id} initialAlerted={isAlerted} />
+          ) : (
+            <Link
+              href="/connexion"
+              className="inline-flex items-center justify-center gap-2 px-4 h-10 rounded-xl font-semibold border text-sm transition-all"
+              style={{
+                background: "transparent",
+                color: "var(--accent)",
+                borderColor: "var(--accent)",
+              }}
+            >
+              <span aria-hidden="true">🔔</span>
+              <span>Se connecter pour alerter</span>
+            </Link>
+          )}
+          <CalendarMenu concert={calendarConcert} />
         </div>
       </div>
     </main>
