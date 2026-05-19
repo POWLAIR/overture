@@ -1,6 +1,7 @@
 "use client"
 
 import { motion, useReducedMotion } from "framer-motion"
+import { useIsClient } from "@/hooks/useIsClient"
 
 interface VinylPlayerProps {
   size?: number
@@ -14,7 +15,9 @@ export function VinylPlayer({
   playing = true,
 }: VinylPlayerProps) {
   const prefersReduced = useReducedMotion()
-  const shouldAnimate = playing && !prefersReduced
+  const isClient = useIsClient()
+
+  const shouldAnimate = isClient && playing && !prefersReduced
 
   const duration = 3.2
 

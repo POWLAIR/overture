@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { motion, useReducedMotion, AnimatePresence } from "framer-motion"
 import { useState } from "react"
+import { motion, useReducedMotion, AnimatePresence } from "framer-motion"
+import { useIsClient } from "@/hooks/useIsClient"
 
 const INSTRUMENT_GLYPHS = ["♩", "♪", "♫", "♬", "𝄞", "𝄢", "𝄡"]
 
@@ -50,17 +50,10 @@ export function InstrumentParticles({
   className = "",
 }: InstrumentParticlesProps) {
   const prefersReduced = useReducedMotion()
-  const [particles, setParticles] = useState<Particle[]>([])
-  const initialized = useRef(false)
+  const isClient = useIsClient()
+  const [particles] = useState<Particle[]>(() => generateParticles(count))
 
-  useEffect(() => {
-    if (!initialized.current) {
-      setParticles(generateParticles(count))
-      initialized.current = true
-    }
-  }, [count])
-
-  if (prefersReduced || !active) return null
+  if (!isClient || prefersReduced || !active) return null
 
   return (
     <div
