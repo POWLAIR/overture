@@ -72,19 +72,10 @@ export default function ConnexionPage() {
   return (
     <main className="min-h-dvh flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        {/* Logo + title */}
-        <Link href="/" className="flex flex-col items-center gap-4 mb-10">
-          <VinylPlayer size={64} playing />
-          <h1
-            className="text-3xl font-bold tracking-wide"
-            style={{
-              fontFamily: "var(--font-cinzel)",
-              color: "var(--accent-light)",
-            }}
-          >
-            Overture
-          </h1>
-        </Link>
+        {/* Decorative vinyl */}
+        <div className="flex justify-center mb-8">
+          <VinylPlayer size={56} playing />
+        </div>
 
         <div
           className="rounded-2xl p-6 sm:p-8"

@@ -7,7 +7,7 @@ import { InstrumentParticles } from "@/components/vinyl/InstrumentParticles"
 
 export default function LandingPage() {
   return (
-    <main className="flex flex-col min-h-dvh">
+    <main className="flex flex-col min-h-[calc(100dvh-3.5rem)]">
       {/* Hero */}
       <section className="relative flex flex-col items-center justify-center flex-1 px-6 py-20 overflow-hidden text-center">
         {/* Background gradient */}
@@ -69,7 +69,7 @@ export default function LandingPage() {
             Explorer les concerts
           </Link>
           <Link
-            href="/connexion"
+            href="/inscription"
             className="inline-flex items-center justify-center h-14 px-8 rounded-full text-base font-semibold border transition-all duration-200"
             style={{
               fontFamily: "var(--font-cinzel)",

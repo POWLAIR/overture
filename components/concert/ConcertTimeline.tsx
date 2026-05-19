@@ -37,7 +37,7 @@ export function ConcertTimeline({
 }: ConcertTimelineProps) {
   if (loading) {
     return (
-      <div className={`flex flex-col items-center justify-center gap-6 py-16 ${className}`}>
+      <div className={`flex flex-col items-center justify-center gap-6 h-full ${className}`}>
         <VinylPlayer size={80} playing />
         <p
           className="text-sm animate-pulse"
@@ -51,7 +51,7 @@ export function ConcertTimeline({
 
   if (concerts.length === 0) {
     return (
-      <div className={`flex flex-col items-center justify-center gap-6 py-16 ${className}`}>
+      <div className={`flex flex-col items-center justify-center gap-6 h-full ${className}`}>
         <VinylPlayer size={80} playing={false} />
         <p
           className="text-base text-center max-w-xs"
