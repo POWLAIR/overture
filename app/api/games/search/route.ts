@@ -24,10 +24,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   })
 
   const ip = request.headers.get("x-forwarded-for") ?? "anonymous"
-  const { success } = await ratelimit.limit(ip)
-
-  if (!success) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+  try {
+    const { success } = await ratelimit.limit(ip)
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+    }
+  } catch {
+    // Redis unreachable — skip rate limiting
   }
 
   const { searchParams } = new URL(request.url)

@@ -21,7 +21,7 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Overture"
   const options = {
     body: data.body || "",
-    icon: "/icon-192.png",
+    icon: "/icons/icon-192.png",
     badge: "/icon-badge.png",
     tag: data.tag || "overture-alert",
     data: {
